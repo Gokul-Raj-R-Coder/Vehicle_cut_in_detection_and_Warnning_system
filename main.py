@@ -28,17 +28,22 @@ classNames = ["person", "bicycle", "car", "motorbike", "aeroplane", "bus", "trai
 tracker = Sort(max_age=20, min_hits=3, iou_threshold=0.3)
 
 # Parameters
-ttc_threshold = 0.7  # Time-to-collision threshold in seconds
+ttc_threshold = 0.7 # Time-to-collision threshold in seconds
 fps = cap.get(cv2.CAP_PROP_FPS)
 
 # Polygon ROI coordinates
-roi_pts = np.array([[0, 720], [550, 300], [740, 300], [1280, 720]], dtype=np.int32)
+roi_pts = np.array([[0, 720], [510, 350], [760, 350], [1280, 720]], dtype=np.int32)
+
+# Conversion factor from pixels to meters
+PIXEL_TO_METER = 0.001
+
 
 # Function to calculate TTC
 def calculate_ttc(distance, relative_velocity):
     if relative_velocity <= 0:  # Vehicle is moving away or stationary
         return float('inf')
     return distance / relative_velocity  # TTC in seconds
+
 
 prev_frame_time = None
 prev_positions = {}
@@ -84,8 +89,8 @@ while True:
         cx, cy = x1 + w // 2, y1 + h // 2
 
         # Check if the vehicle's center is within the ROI polygon
-        if (cv2.pointPolygonTest(roi_pts, (x2-(w//4), y2-(h//4)), False) >= 0) or (cv2.pointPolygonTest(roi_pts, (x1+(w//4), y1+(3*h//4)), False) >= 0):
-
+        if (cv2.pointPolygonTest(roi_pts, (x2 - (w // 4), y2 - (h // 4)), False) >= 0) or (
+                cv2.pointPolygonTest(roi_pts, (x1 + (w // 4), y1 + (3 * h // 4)), False) >= 0):
             current_positions[obj_id] = (cx, cy, x1, y1, x2, y2)
             cvzone.cornerRect(frame, (x1, y1, w, h), l=9, rt=2, colorR=(255, 0, 255))
             cv2.circle(frame, (cx, cy), 5, (255, 0, 255), cv2.FILLED)
@@ -99,34 +104,38 @@ while True:
 
             # Calculate distance and relative velocity
             displacement_vector = (curr_cx - prev_cx, curr_cy - prev_cy)
-            dist = distance.euclidean((prev_cx, prev_cy), (curr_cx, curr_cy))
+            dist_px = distance.euclidean((prev_cx, prev_cy), (curr_cx, curr_cy))
+            dist_meters = dist_px * PIXEL_TO_METER  # Convert distance from pixels to meters
             time_diff = current_frame_time - prev_frame_time
             if time_diff == 0:
                 continue
 
-
-
             # Reference direction from camera center to object center
             ref_vector = (curr_cx - 640, curr_cy - 720)
-            ref_magnitude = distance.euclidean((640, 720), (curr_cx, curr_cy))
+            ref_magnitude_px = distance.euclidean((640, 720), (curr_cx, curr_cy))
+            ref_magnitude_meters = ref_magnitude_px * PIXEL_TO_METER  # Convert distance from pixels to meters
 
             # Relative velocity calculation (projected on reference direction)
-            relative_velocity = (displacement_vector[0] * ref_vector[0] + displacement_vector[1] * ref_vector[1]) / (time_diff * ref_magnitude)
+            relative_velocity_mps = (displacement_vector[0] * ref_vector[0] + displacement_vector[1] * ref_vector[
+                1]) / (time_diff * ref_magnitude_px) * PIXEL_TO_METER
 
             # Calculate TTC
-            distance_from_center = ref_magnitude
-            ttc = calculate_ttc(distance_from_center, relative_velocity)
+            distance_from_center_meters = ref_magnitude_meters
+            ttc = calculate_ttc(distance_from_center_meters, relative_velocity_mps)
             print(ttc)
             if ttc < ttc_threshold:
                 # Generate warning
                 cv2.rectangle(frame, (int(curr_x1), int(curr_y1)), (int(curr_x2), int(curr_y2)), (0, 0, 255), 2)
-                cv2.putText(frame, f"Collision Warning: {ttc:.2f}s", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                cv2.putText(frame, f"Collision Warning: {ttc:.2f}s", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255),
+                            2)
             else:
-                cvzone.cornerRect(frame, (curr_x1, curr_y1, curr_x2 - curr_x1, curr_y2 - curr_y1), l=9, rt=2, colorR=(0, 255, 0))
+                cvzone.cornerRect(frame, (curr_x1, curr_y1, curr_x2 - curr_x1, curr_y2 - curr_y1), l=9, rt=2,
+                                  colorR=(0, 255, 0))
 
             # Display speed of the vehicle
-            speed_kmh = relative_velocity * 3.6  # Convert speed from pixels per second to km/h
-            cv2.putText(frame, f"Speed: {speed_kmh:.2f} km/h", (int(curr_x1), int(curr_y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            speed_kmh = relative_velocity_mps * 3.6  # Convert speed from m/s to km/h
+            cv2.putText(frame, f"Rel_vel: {speed_kmh:.2f} km/h", (int(curr_x1), int(curr_y1) - 10),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
     cv2.imshow("Frame", frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
