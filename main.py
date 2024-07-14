@@ -10,7 +10,7 @@ from sort import Sort
 model = YOLO('../Yolo-Weights/yolov8n.pt')
 
 # Open video capture
-cap = cv2.VideoCapture("C:\\Users\\govindraj R\\OneDrive\\Desktop\\IMG_4513.mp4")
+cap = cv2.VideoCapture("C:\\Users\\govindraj R\\Videos\\Captures\\final testcase.mp4")
 
 # Class names for YOLO
 classNames = ["person", "bicycle", "car", "motorbike", "aeroplane", "bus", "train", "truck", "boat",
@@ -84,7 +84,8 @@ while True:
         cx, cy = x1 + w // 2, y1 + h // 2
 
         # Check if the vehicle's center is within the ROI polygon
-        if cv2.pointPolygonTest(roi_pts, (cx, cy), False) >= 0:
+        if (cv2.pointPolygonTest(roi_pts, (x2-(w//4), y2-(h//4)), False) >= 0) or (cv2.pointPolygonTest(roi_pts, (x1+(w//4), y1+(3*h//4)), False) >= 0):
+
             current_positions[obj_id] = (cx, cy, x1, y1, x2, y2)
             cvzone.cornerRect(frame, (x1, y1, w, h), l=9, rt=2, colorR=(255, 0, 255))
             cv2.circle(frame, (cx, cy), 5, (255, 0, 255), cv2.FILLED)
