@@ -3,28 +3,28 @@
 
 FEATURES
 
--Real-time vehicle detection using YOLOv8
+    -Real-time vehicle detection using YOLOv8
 
--Object tracking with SORT
+    -Object tracking with SORT
 
--Calculation of relative speed and time-to-collision (TTC)
+    -Calculation of relative speed and time-to-collision (TTC)
 
--Collision warning system
+    -Collision warning system
 
 
 
 PREREQUISITES
 
--Python 3.x
+    -Python 3.x
 
--OpenCV
+    -OpenCV
 
--NumPy
+    -NumPy
 
--SciPy
+    -SciPy
 
--CVZone
+    -CVZone
 
--Ultralytics
+    -Ultralytics
 
--SORT
+    -SORT
